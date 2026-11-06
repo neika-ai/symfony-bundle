@@ -11,15 +11,15 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 class EnvCredentialsProvider implements CredentialsProviderInterface
 {
     public function __construct(
-        #[Autowire('%env(string:default::CHATBOT_API_SECRET)%')]
+        #[Autowire('%env(string:default::NEIKA_CHATBOT_API_SECRET)%')]
         #[\SensitiveParameter]
         private readonly string $apiSecret,
 
-        #[Autowire('%env(string:default::CHATBOT_INGEST_SECRET)%')]
+        #[Autowire('%env(string:default::NEIKA_CHATBOT_INGEST_SECRET)%')]
         #[\SensitiveParameter]
         private readonly string $ingestSecret,
 
-        #[Autowire('%env(string:default::CHATBOT_SITE_KEY)%')]
+        #[Autowire('%env(string:default::NEIKA_CHATBOT_SITE_KEY)%')]
         private readonly string $siteKey,
     ) {
     }

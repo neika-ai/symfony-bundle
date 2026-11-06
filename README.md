@@ -1,33 +1,20 @@
 # Neika Symfony Bundle
 
-Symfony bundle for the [Neika](https://neika.ai) chatbot: the `/chatbot/v1` tool-server endpoints,
-their auth, one-click pairing and outbound reporting. PHP 8.1+, Symfony 6.4+. MIT.
+Symfony bundle for the [Neika](https://neika.ai) chatbot: the `/chatbot/v1` endpoints the chatbot calls, their auth,
+one-click pairing and reporting back to Neika. PHP 8.1+, Symfony 6.4+. MIT.
 
 Sylius users: use [`neika-ai/sylius-plugin`](https://github.com/neika-ai/sylius-plugin).
+The DTOs, the HTTP contract and the clients come from [`neika-ai/sdk`](https://github.com/neika-ai/sdk).
 
 ## Features
 
-- [Tools](#add-a-tool) and [data sources](#add-a-data-source) — one autoconfigured class each, no config
+- [Tools](#add-a-tool) and [data sources](#add-a-data-source) — one class each, no config
 - [Connect from the dashboard](#connect-from-the-dashboard) — the shop admin clicks **Connect**; nobody copies a secret
 - [Store credentials elsewhere](#store-credentials-elsewhere) — database, vault, per-channel keys
 - [Push catalog changes](#push-catalog-changes) — the chatbot re-indexes just the entries you changed
 - [Chat click tracking](#chat-click-tracking) — chat link visits reported with no code
 - [Widget](#widget) — chat embed markup from your config
-- [Translations](#translations) — 10 languages built in; override or add your own
-
-## Endpoints
-
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/chatbot/v1/tools` | List tools with generated JSON input schemas; labels translated per `Accept-Language`. |
-| POST | `/chatbot/v1/tools/{name}` | Call a tool with `{ arguments, context: { conversationId, locale, channelCode } }`. |
-| GET | `/chatbot/v1/sources` | List data sources with served locales. |
-| GET | `/chatbot/v1/sources/{name}` | Read a data source, keyset-paginated. |
-| GET | `/chatbot/pair?code=…` | Browser lands here when the admin clicks **Connect**. |
-
-**Tools** answer "what is true right now" — the backend calls them mid-conversation for live data.
-**Sources** answer "what the shop is" — the backend pulls them in bulk and ingests them into its own
-retrieval index; never called per chat.
+- [Translations](#translations) — 10 languages built in
 
 ## Install
 
@@ -35,7 +22,7 @@ retrieval index; never called per chat.
 composer require neika-ai/symfony-bundle
 ```
 
-1. `config/bundles.php` — Symfony Flex already did this if it's on.
+1. `config/bundles.php`. Symfony Flex adds this line for you.
 
 ```php
 Neika\SymfonyBundle\NeikaSymfonyBundle::class => ['all' => true],
@@ -45,20 +32,20 @@ Neika\SymfonyBundle\NeikaSymfonyBundle::class => ['all' => true],
 
 ```yaml
 neika:
-    backend_url: '%env(CHATBOT_BACKEND_URL)%'
+    backend_url: '%env(NEIKA_CHATBOT_BACKEND_URL)%'
 ```
 
-3. `.env.local` — skip the three secrets if you [connect from the dashboard](#connect-from-the-dashboard)
+3. `.env.local`. Skip the three secrets if you [connect from the dashboard](#connect-from-the-dashboard)
    with your own [credentials store](#store-credentials-elsewhere).
 
 ```dotenv
-CHATBOT_BACKEND_URL=https://neika.ai
-CHATBOT_API_SECRET=
-CHATBOT_INGEST_SECRET=
-CHATBOT_SITE_KEY=
+NEIKA_CHATBOT_BACKEND_URL=https://neika.ai
+NEIKA_CHATBOT_API_SECRET=
+NEIKA_CHATBOT_INGEST_SECRET=
+NEIKA_CHATBOT_SITE_KEY=
 ```
 
-4. `config/routes/neika.php` — routes aren't auto-loaded.
+4. `config/routes/neika.php`. Routes aren't loaded automatically.
 
 ```php
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
@@ -68,7 +55,7 @@ return static function (RoutingConfigurator $routes): void {
 };
 ```
 
-5. `config/packages/security.yaml` — the backend sends `Authorization: Bearer <api secret>`.
+5. `config/packages/security.yaml`. The chatbot sends `Authorization: Bearer <api secret>`.
 
 ```yaml
 security:
@@ -89,10 +76,25 @@ security:
         - { path: ^/chatbot/v1, roles: ROLE_CHATBOT_BACKEND }
 ```
 
-Firewalls match in order — put `chatbot_api` **before** any catch-all firewall that also matches `^/`.
+**Put `chatbot_api` before any catch-all firewall.** Firewalls match in order.
 
-> `/chatbot/pair` sits outside `^/chatbot/v1` on purpose: it's a browser redirect, the one-time code is
-> the proof. Keep it reachable without login.
+> Keep `/chatbot/pair` reachable without login. It's a browser redirect, and the one-time code is the proof.
+
+## Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/chatbot/v1/tools` | List tools, labels in the `Accept-Language` locale |
+| POST | `/chatbot/v1/tools/{name}` | Call a tool |
+| GET | `/chatbot/v1/sources` | List data sources and their locales |
+| GET | `/chatbot/v1/sources/{name}` | Read one page of a data source |
+| GET | `/chatbot/pair?code=…` | The admin's browser lands here after clicking **Connect** |
+
+Request and response bodies follow the sdk's [HTTP contract](https://github.com/neika-ai/sdk#http-contract-what-the-chatbot-backend-expects).
+Errors too; `violations` is filled only on a 422.
+
+Tools give live data in the middle of a conversation. Sources are pulled in bulk into Neika's search index,
+never once per chat.
 
 ## Configuration
 
@@ -107,8 +109,8 @@ neika:
 
 | Option | Default | Meaning |
 |---|---|---|
-| `backend_url` | `''` | Neika origin for outbound calls and pairing. Empty → nothing sent. Not https outside `dev` → refused. |
-| `widget.enabled` | `true` | Parameter `neika.widget.enabled` for whoever prints the widget. |
+| `backend_url` | `''` | Neika origin for everything the shop sends and for pairing. Empty → nothing sent. Not https outside `dev` → refused. |
+| `widget.enabled` | `true` | Parameter `neika.widget.enabled`, for whoever prints the widget. |
 | `widget.cdn_url` | `''` | Widget script URL. `''` = `https://neika.b-cdn.net/widget/v1/chat.js`. |
 | `widget.defer` | `true` | `false` → plain `<script src="…">`, no `defer`. |
 
@@ -116,15 +118,15 @@ neika:
 
 | Env var | Used for | Empty |
 |---|---|---|
-| `CHATBOT_API_SECRET` | Bearer the backend sends to `/chatbot/v1` | every call → 401 `unauthorized` |
-| `CHATBOT_INGEST_SECRET` | outbound calls, `Bearer <site key>.<ingest secret>` | `hasIngestSecret()` → `false`, no outbound calls; widget still works |
-| `CHATBOT_SITE_KEY` | outbound calls, widget | `findCurrentSite()` → `null` |
+| `NEIKA_CHATBOT_API_SECRET` | The bearer the chatbot sends to `/chatbot/v1` | Every call → 401 `unauthorized` |
+| `NEIKA_CHATBOT_INGEST_SECRET` | What the shop sends, as `Bearer <site key>.<ingest secret>` | `hasIngestSecret()` → `false`, nothing sent; the widget still works |
+| `NEIKA_CHATBOT_SITE_KEY` | What the shop sends, and the widget | `findCurrentSite()` → `null` |
 
-Missing env vars never break the boot.
+A missing secret never breaks the boot.
 
 ## Store credentials elsewhere
 
-**Keep the secrets in a database or vault → implement `CredentialsProviderInterface` and alias it.**
+**Keep the secrets in a database or vault: implement `CredentialsProviderInterface` and alias it.**
 
 `src/Chatbot/DatabaseCredentials.php`
 
@@ -168,18 +170,18 @@ class DatabaseCredentials implements CredentialsProviderInterface
 +    Neika\SymfonyBundle\Contract\CredentialsProviderInterface: '@App\Chatbot\DatabaseCredentials'
 ```
 
-| Method | Called | Return |
+| Method | Called on | Return |
 |---|---|---|
-| `isApiSecretValid($token)` | every `/chatbot/v1` request | `true` = the backend may call. You own the compare → store only a hash if you like. |
-| `findCurrentSite()` | landing requests with `?neikaclid=`, your own outbound/widget code | the site of the current request; `null` → nothing reported, empty ingest secret → widget only |
+| `isApiSecretValid($token)` | Every `/chatbot/v1` request | `true` lets the chatbot in. You do the compare, so you can store only a hash. |
+| `findCurrentSite()` | Landings with `?neikaclid=`, and your own code | The current request's site. `null` → nothing reported. Empty ingest secret → widget only. |
 
-- Read the store on each call, don't keep it in a property → a re-paired secret works without a restart,
-  also in long-running workers.
-- Use `hash_equals` for the compare.
+- Read the store on every call instead of caching it in a property. A re-paired secret then works without a
+  restart, in long-running workers too.
+- Compare with `hash_equals`.
 
-### Enable Connect
+## Connect from the dashboard
 
-**Implement `CredentialsWriterInterface` too → the dashboard's Connect button fills your store.**
+**Implement `CredentialsWriterInterface` too, and the dashboard's Connect button fills your store.**
 
 ```php
 use Neika\Sdk\Pairing\HostMatcher;
@@ -226,38 +228,30 @@ class DatabaseCredentials implements CredentialsProviderInterface, CredentialsWr
 +    Neika\SymfonyBundle\Contract\CredentialsWriterInterface: '@App\Chatbot\DatabaseCredentials'
 ```
 
-| Method | Return / effect |
+| Method | Return or effect |
 |---|---|
-| `findTrustedHost($request)` | the hostname this shop answers on, from your own data; `null` → `pairing_hostname_missing` |
-| `save($credentials, $request)` | store `siteKey`, `apiSecret`, `ingestSecret`; `channelCodes` = the connection's channels, if you key per channel; `verifiedDomains` = the website's verified domains, to check each channel's host |
+| `findTrustedHost($request)` | The hostname this shop answers on, from your own data. `null` → `pairing_hostname_missing`. |
+| `save($credentials, $request)` | Store `siteKey`, `apiSecret` and `ingestSecret`. `channelCodes` are the connection's channels, if you keep keys per channel. `verifiedDomains` are the website's verified domains, to check each channel's host against. |
 
-- `save()` throws `PairingException` → error page with its code, nothing else happens. Any other exception → 500.
-  Use a `PairingErrorCode` value for a translated message:
+- `save()` throws `PairingException` → the error page shows its code, nothing else happens. Any other exception → 500.
+  Use a `PairingErrorCode` value to get a translated message:
   `throw new PairingException('Read-only store.', PairingErrorCode::Unsupported->value)`.
-- No writer aliased → `/chatbot/pair` answers 409: "paste the credentials manually".
+- No writer aliased → `/chatbot/pair` answers 409 and asks the admin to paste the credentials by hand.
 
-## Connect from the dashboard
-
-**Needs a [credentials writer](#enable-connect).** Then nobody types a secret:
+What happens on Connect:
 
 1. The admin clicks **Connect** on a tool-server connection in the Neika dashboard.
 2. The browser opens `{connection base URL}/chatbot/pair?code=…` on your shop.
-3. The bundle makes two 64-character secrets, redeems the code at your configured `backend_url` and calls
-   `save()`.
+3. The bundle generates two 64-character secrets, redeems the code at `backend_url` and calls `save()`.
 4. The browser goes back to the dashboard, which tests the connection with the new API secret.
 
-> The dashboard starts pairing only for a connection whose base URL is on a verified domain of the website.
+> The dashboard offers Connect only for a connection whose base URL is on a verified domain of the website.
 
-**The host of the connection's base URL must equal `findTrustedHost()`.** Case, a trailing dot and IDN
-spelling don't matter, `www.` does: `www.shop.example` ≠ `shop.example`. Mismatch → `pairing_wrong_shop`,
-nothing saved. Return a hostname you stored, never the request's `Host` header — anyone can send any `Host`.
-Compare your own hosts the same way with `HostMatcher` (autowired).
+**The host of the connection's base URL must match `findTrustedHost()`.** Case, a trailing dot and IDN spelling
+don't matter. `www.` does: `www.shop.example` isn't `shop.example`. Return a hostname you stored, never the
+request's `Host` header, since anyone can send any `Host`. `HostMatcher` is autowired for your own compares.
 
-**The backend never redirects the secrets.** Its answer redirects → not followed, `invalid_response`. Its
-return URL off the `backend_url` origin → `invalid_response`, nothing saved.
-
-Something fails → a short page in the request locale (English, Czech shipped) with the message and the
-error code:
+When something fails, the page shows a short message in the request locale and the error code. Nothing is saved:
 
 | Code | Status | Cause |
 |---|---|---|
@@ -265,48 +259,34 @@ error code:
 | `invalid_code` | 400 | `code` missing or malformed |
 | `backend_url_refused` | 400 | `backend_url` empty, or not https outside `dev` |
 | `pairing_hostname_missing` | 400 | `findTrustedHost()` returned `null` |
-| `pairing_wrong_shop` | 400 | Base URL host ≠ trusted host |
-| `pairing_not_found` | 400 | Code unknown, used, or older than 10 minutes |
-| `rate_limited` | 400 | Too many unknown codes from the shop's IP; wait 10 minutes |
-| `transport_failed` | 400 | Backend unreachable |
-| `validation_failed`, `invalid_request`, `invalid_response` | 400 | Backend refused the request, answered unexpectedly or redirected |
-| code of the `PairingException` `save()` throws | 400 | Your writer refused |
+| `pairing_wrong_shop` | 400 | The base URL's host isn't the trusted host |
+| `invalid_response` | 400 | The backend's answer redirected, was unreadable, or had a return URL off the `backend_url` origin |
+| Your `PairingException` code | 400 | Your `save()` refused |
+| Any other code | 400 | The backend refused; see the sdk's [pairing codes](https://github.com/neika-ai/sdk#pairing) |
 
-> After `pairing_wrong_shop` or a failing `save()` the code is already used up → click **Connect** again.
-
-## Error format
-
-Every `/chatbot/v1` endpoint returns errors as:
-
-```json
-{ "error": { "code": "...", "message": "...", "violations": [] } }
-```
-
-`violations` is non-empty only on HTTP 422 (`validation_failed`).
+> Once the backend has seen the code, it's used up. After `pairing_wrong_shop`, a bad return URL or a failing
+> `save()`, click **Connect** again.
 
 ## Locales
 
-**Every locale you send must be one ICU knows** (`symfony/intl`). Spelling does not matter: `cs-CZ`,
-`cs_cz` and `CS-cz` all mean `cs_CZ`. The requested locale is matched against the locales served —
-first as the same locale, then as the same language — and everything queried and rendered uses the
-served locale's own full code, never the requested spelling and never a bare language.
+**Send locales ICU knows** (`symfony/intl`). `cs-CZ`, `cs_cz` and `CS-cz` all mean `cs_CZ`. A requested locale
+matches a served locale with the same code first, then one with the same language. Everything after that uses the
+served locale's full code.
 
-What a bad locale costs differs per endpoint, because each has somewhere different to fall back to:
-
-| Endpoint | Not an ICU locale | Valid but unserved |
+| Endpoint | Not an ICU locale | Valid but not served |
 |---|---|---|
 | `GET /sources/{name}?locale=` | 400 `invalid_locale` | 400 `invalid_locale` |
-| `POST /tools/{name}` (`context.locale`) | 422 `validation_failed`, a `context.locale` violation | falls back to the channel's default locale |
-| `GET /tools` (`Accept-Language`) | 400 `bad_request` | falls back to the channel's default locale |
+| `POST /tools/{name}` (`context.locale`) | 422 `validation_failed`, a `context.locale` violation | The channel's default locale |
+| `GET /tools` (`Accept-Language`) | 400 `bad_request` | The channel's default locale |
 
-Which locales are served, and what "default locale" means, comes from `ChatbotLocaleContextInterface`.
-The default returns the kernel locale only; override that service to serve more (the Sylius plugin
-makes it channel-aware).
+`ChatbotLocaleContextInterface` decides which locales are served and which one is the default. The bundle's
+default serves the kernel locale only. Override the service to serve more; the Sylius plugin makes it
+channel-aware.
 
 ## Translations
 
-**The bundle's strings ship in cs, en, de, sk, pl, hu, ro, sl, hr and ru**, in the `neika` domain.
-Override a string or add a language in your app:
+**Strings ship in cs, en, de, sk, pl, hu, ro, sl, hr and ru**, in the `neika` domain. Override one or add a
+language in your app:
 
 `translations/neika.it.yaml`
 
@@ -317,15 +297,14 @@ neika:
 ```
 
 **A string missing in the visitor's language comes from the channel's default locale**
-(`ChatbotLocaleContextInterface::getDefaultLocale()`), not your app's global fallback.
-Your own tools' descriptions and labels work the same way, in `messages` unless you set
-`translationDomain` on the definition.
+(`ChatbotLocaleContextInterface::getDefaultLocale()`), not your app's fallback. Your tools' descriptions and
+labels work the same way, in `messages` or the `translationDomain` you set on the definition.
 
 > API error messages and the pairing page use the request locale.
 
 ## Add a tool
 
-One class plus one arguments DTO, no configuration:
+One class and one arguments DTO. The interface is autoconfigured.
 
 ```php
 readonly class MyArguments
@@ -357,21 +336,27 @@ readonly class MyTool implements ChatbotToolInterface
 }
 ```
 
-The interface is autoconfigured. The input schema is generated from the DTO: `Assert\NotBlank` →
-required, `Assert\Email` → e-mail format, `Assert\Choice` → enum, `Assert\Length` → maxLength,
-nullable → optional. Put `#[Sensitive]` on arguments that carry personal data — see
-[Personal data in tools](https://github.com/neika-ai/sdk#personal-data-in-tools). Descriptions and
-labels are translation keys in `messages`, or in the `translationDomain` you pass to `ToolDefinition` — see [Translations](#translations).
+The input schema comes from the DTO's constraints:
 
-**`getDefinition()` must not read constructor arguments** — it runs at container compile time to index
-tools by name, and duplicate names fail the build.
+| Constraint | Schema |
+|---|---|
+| `Assert\NotBlank` | Required. Everything else is optional. |
+| `Assert\Email` | `format: email` |
+| `Assert\Choice` | `enum` |
+| `Assert\Length(max:)` | `maxLength` |
 
-### Choices loaded at runtime
+Mark arguments that carry personal data with `#[Sensitive]`; see
+[Personal data in tools](https://github.com/neika-ai/sdk#personal-data-in-tools).
 
-`Assert\Choice` takes a fixed list or a static callback — no services. **When the allowed values live
-in the database, use `#[ToolChoice]`** instead: `Assert\Choice` with the choices loaded from a
-`ToolChoiceLoaderInterface` service (autoconfigured). The loaded values become the property's schema
-`enum`, and Symfony's `ChoiceValidator` checks them on every call.
+**`getDefinition()` must not read constructor arguments.** It runs while the container compiles. Names must match
+`^[a-z0-9_]{1,64}$` and be unique across tools; a bad or duplicate name fails the build.
+
+## Choices loaded at runtime
+
+`Assert\Choice` takes a fixed list or a static callback, no services. **When the allowed values live in the
+database, use `#[ToolChoice]`:** `Assert\Choice` with the choices from a `ToolChoiceLoaderInterface` service
+(autoconfigured). The loaded values become the property's schema `enum`, and Symfony's `ChoiceValidator` checks
+every call.
 
 ```php
 use Neika\Sdk\Contract\ToolChoiceLoaderInterface;
@@ -400,35 +385,31 @@ readonly class FindByRegionArguments
 }
 ```
 
-- Takes every `Assert\Choice` option except `choices`, `callback` and `strict`: `multiple`, `min`,
-  `max`, `match` and the messages. Violations carry `Choice`'s codes and parameters.
-- The property must be `string`, or `array` with `multiple: true` (published as `items.enum`, plus
-  `minItems`/`maxItems`). Anything else fails the tool list.
-- The loader is looked up by its service id, which must be its class name (the autoconfigured default).
-- Choices are the exact values the tool accepts, in every locale — not translated labels. Duplicates
-  are dropped.
-- An empty loader leaves the argument out of the schema; any value sent then fails validation. A
-  required argument (`Assert\NotBlank`) with an empty loader makes the tool uncallable.
-- **Return an empty list for missing data; throw only for misconfiguration** — a loader that throws
-  fails both the tool list and the call.
-- `null` passes; add `Assert\NotBlank` to make the argument required.
+- Every `Assert\Choice` option works except `choices`, `callback` and `strict`: `multiple`, `min`, `max`, `match`
+  and the messages. Violations carry `Choice`'s codes and parameters.
+- Type the property `string`, or `array` with `multiple: true` (published as `items.enum`, plus
+  `minItems`/`maxItems`). Any other type fails the tool list.
+- The loader is found by its exact class among the autoconfigured loaders.
+- Choices are the exact values the tool accepts, the same in every locale, not translated labels. Duplicates are
+  dropped.
+- An empty list leaves the argument out of the schema, and any value sent then fails validation. A required
+  argument (`Assert\NotBlank`) with an empty list makes the tool uncallable.
+- **Return an empty list for missing data; throw only for misconfiguration.** A loader that throws breaks both the
+  tool list and the call.
+- `null` passes. Add `Assert\NotBlank` to make the argument required.
 
 ## Add a data source
 
-Implement `ChatbotDataSourceInterface` the same way a tool is added — one autoconfigured class.
-`SourceDefinition::$locales = null` means "all locales of the current context".
-
-`GET /sources/{name}?locale=cs_CZ&cursor=&ids[]=` returns keyset-paginated documents, 200 per page.
-With `ids[]` (max 500) the cursor is ignored and `nextCursor` is `null`.
+Implement `ChatbotDataSourceInterface`; it's autoconfigured and named like a tool. `SourceDefinition::$locales = null`
+means every locale the channel serves. The query you get and the page you return follow the sdk's
+[HTTP contract](https://github.com/neika-ai/sdk#http-contract-what-the-chatbot-backend-expects). `CursorCodec` and
+`HtmlToText` are autowired.
 
 ## Push catalog changes
 
-**Tell Neika which entries changed so it re-indexes them.** Inject
-`Neika\Sdk\Ingest\CatalogIngestClient` — it is wired to Symfony's HTTP client (2 s timeout,
-5 s max duration) and your `backend_url`. Pass the site from `CredentialsProviderInterface` per call:
-
-> **The backend accepts changes only from an active site.** A draft site answers 401 — activate it in the
-> dashboard first.
+**Tell Neika which entries changed so it re-indexes them.** Inject `Neika\Sdk\Ingest\CatalogIngestClient`. It's
+wired to your `backend_url` with a 2 s timeout and 5 s max duration. Pass the site from
+`CredentialsProviderInterface` on each call:
 
 ```php
 use Neika\Sdk\DTO\CatalogChange;
@@ -445,13 +426,15 @@ if ($canSend) {
 }
 ```
 
-Max 500 ids per call. The request sends `Authorization: Bearer <site key>.<ingest secret>`. `$result->accepted` is the 202;
-`$result->isThrottled()` is a 429 or 503: nothing was queued, send the same ids again after `$result->retryAfterSeconds`.
+> **Neika accepts changes only from an active site.** A draft site gets a 401, so activate it in the dashboard
+> first.
+
+Limits, results and retries: see the sdk's [push catalog changes](https://github.com/neika-ai/sdk#outbound-push-catalog-changes).
 
 ## Widget
 
-**The bundle doesn't print the widget; it gives you the pieces.** `WidgetSnippet` renders the markup,
-the `widget.*` options are parameters:
+**The bundle doesn't print the widget; it gives you the pieces.** `WidgetSnippet` renders the markup, and the
+`widget.*` options are parameters:
 
 ```php
 use Neika\Sdk\Widget\WidgetSnippet;
@@ -494,23 +477,21 @@ Output:
 <ai-chat-widget site-key="{site key}" backend-url="{backend_url}"></ai-chat-widget>
 ```
 
-The widget talks only to `backend_url`; it never calls `/chatbot/v1` itself.
-(`neika-ai/sylius-plugin` injects it into the shop layout for you.)
+The widget talks only to `backend_url`, never to your `/chatbot/v1`.
 
 ## Chat click tracking
 
-**Visits from chat links are reported for you.** Links the chat sends carry `?neikaclid=…`; when such a
-page loads with a 2xx, the bundle tells Neika after the response is sent — even if the widget is
-blocked. Needs `backend_url` and a site from `findCurrentSite()`.
+**Visits from chat links are reported for you.** Links the chat sends carry `?neikaclid=…`. When such a page
+loads with a 2xx, the bundle tells Neika after the response is sent, even when the widget is blocked.
 
-- Reported: main GET request, no prefetch, page address without query or fragment.
-- `findCurrentSite()` → `null`, empty ingest secret, or `backend_url` empty → nothing sent, nothing logged.
-- `findCurrentSite()` throws → logged warning, nothing sent.
-- Backend unreachable → logged warning; your page is never affected.
-- Non-https `backend_url` → skipped with a logged warning outside the `dev` env.
+- Reported: the main GET request, not a prefetch, with the page address minus query and fragment.
+- `findCurrentSite()` → `null`, an empty ingest secret or an empty `backend_url` → nothing sent, nothing logged.
+- `findCurrentSite()` throws → a logged warning, nothing sent.
+- Neika unreachable → a logged warning. Your page is never affected.
+- A non-https `backend_url` outside `dev` → skipped with a logged warning.
 
-**Report orders yourself.** Remember the `neikaclid` (e.g. in the session) and, when the order is
-placed, call `Neika\Sdk\Telemetry\TelemetryClient`:
+**Report orders yourself.** Keep the `neikaclid` (in the session, say) and call
+`Neika\Sdk\Telemetry\TelemetryClient` when the order is placed:
 
 ```php
 use Neika\Sdk\DTO\ChatOrder;
@@ -527,9 +508,7 @@ if ($canSend) {
 }
 ```
 
-Revenue is in ISO 4217 minor units: `129900` = 1299.00 CZK.
-
-It throws `TelemetryException` on failure — catch and log it.
+Revenue units and errors: see the sdk's [chat click tracking](https://github.com/neika-ai/sdk#chat-click-tracking).
 
 ## Tests
 
@@ -540,4 +519,4 @@ vendor/bin/phpunit
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
