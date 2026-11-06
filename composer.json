@@ -1,0 +1,45 @@
+{
+    "name": "neika-ai/symfony-bundle",
+    "description": "Vanilla Symfony bundle exposing the Neika chatbot tool-server endpoints, security and wiring",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "require": {
+        "php": "^8.1",
+        "neika-ai/sdk": "^0.1",
+        "nyholm/psr7": "^1.8",
+        "symfony/config": "^6.4 || ^7.0 || ^8.0",
+        "symfony/dependency-injection": "^6.4 || ^7.0 || ^8.0",
+        "symfony/event-dispatcher": "^6.4 || ^7.0 || ^8.0",
+        "symfony/framework-bundle": "^6.4 || ^7.0 || ^8.0",
+        "symfony/http-client": "^6.4 || ^7.0 || ^8.0",
+        "symfony/http-foundation": "^6.4 || ^7.0 || ^8.0",
+        "symfony/http-kernel": "^6.4 || ^7.0 || ^8.0",
+        "symfony/routing": "^6.4 || ^7.0 || ^8.0",
+        "symfony/security-core": "^6.4 || ^7.0 || ^8.0",
+        "symfony/security-http": "^6.4 || ^7.0 || ^8.0",
+        "symfony/serializer": "^6.4 || ^7.0 || ^8.0",
+        "symfony/translation": "^6.4 || ^7.0 || ^8.0",
+        "symfony/validator": "^6.4 || ^7.0 || ^8.0",
+        "symfony/yaml": "^6.4 || ^7.0 || ^8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+        "psr/log": "^1.0 || ^2.0 || ^3.0"
+    },
+    "suggest": {
+        "psr/log": "Log failed tool executions — inject any PSR-3 logger (monolog/monolog)"
+    },
+    "autoload": {
+        "psr-4": {
+            "Neika\\SymfonyBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Neika\\SymfonyBundle\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
