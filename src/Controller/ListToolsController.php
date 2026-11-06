@@ -46,9 +46,8 @@ class ListToolsController extends AbstractController
     }
 
     /**
-     * @invariant Matches across every channel, not the one the request resolved. A tool is the
-     *            same code on all of them, so a backend driving several channels through one host
-     *            must get its descriptions in the locale it asked for, not the host channel's.
+     * @invariant Match against every channel's locales, not the request's channel: one host can serve
+     *            several channels, and the backend must get descriptions in the locale it asked for.
      */
     private function resolveLocale(?string $requested): string
     {

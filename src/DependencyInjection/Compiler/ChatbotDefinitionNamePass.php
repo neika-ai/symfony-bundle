@@ -8,11 +8,6 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\LogicException;
 
-/**
- * Validates chatbot tool/source definition names at compile time: the registries key services by
- * `getDefinition()->name`, so a duplicate would silently shadow another and a malformed name would
- * only surface at runtime. Fail the build instead.
- */
 class ChatbotDefinitionNamePass implements CompilerPassInterface
 {
     private const NAME_PATTERN = '/^[a-z0-9_]{1,64}$/';

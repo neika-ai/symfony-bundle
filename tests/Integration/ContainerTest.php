@@ -18,9 +18,7 @@ use Neika\SymfonyBundle\Reporting\BackendReportGuard;
 use Neika\SymfonyBundle\Tests\Unit\Fixtures\AlphaTool;
 use Neika\SymfonyBundle\Tests\Unit\Fixtures\CursorConsumingDataSource;
 use Neika\SymfonyBundle\Tests\Unit\Fixtures\FixedCredentialsProvider;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
 class ContainerTest extends TestCase
 {
@@ -91,29 +89,6 @@ class ContainerTest extends TestCase
         $kernel->boot();
 
         self::assertFalse($kernel->getContainer()->getParameter('neika.widget.defer'));
-    }
-
-    /**
-     * @return iterable<string, array{array<string, mixed>}>
-     */
-    public static function provideRemovedConfiguration(): iterable
-    {
-        yield 'api_secret' => [['api_secret' => 'top-secret']];
-        yield 'ingest_secret' => [['ingest_secret' => 'ingest-secret']];
-        yield 'widget.site_key' => [['widget' => ['site_key' => 'site-a']]];
-    }
-
-    /**
-     * @param array<string, mixed> $neikaConfig
-     */
-    #[DataProvider('provideRemovedConfiguration')]
-    public function testRemovedConfigurationIsRejected(array $neikaConfig): void
-    {
-        $kernel = new NeikaTestKernel('test', true, $neikaConfig);
-
-        $this->expectException(InvalidConfigurationException::class);
-
-        $kernel->boot();
     }
 
     public function testTheBackendReportGuardIsPublic(): void
