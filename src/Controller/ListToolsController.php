@@ -34,8 +34,10 @@ class ListToolsController extends AbstractController
 
         $tools = [];
         foreach ($this->toolRegistry->all() as $tool) {
+            $argumentsClass = $tool->getArgumentsClass();
             $definition = $tool->getDefinition()
-                ->withInputSchema($this->schemaGenerator->generate($tool->getArgumentsClass()))
+                ->withInputSchema($this->schemaGenerator->generate($argumentsClass))
+                ->withSensitiveArguments($this->schemaGenerator->listSensitiveArguments($argumentsClass))
                 ->translated($this->translator, $locale);
             $tools[] = $definition->jsonSerialize();
         }

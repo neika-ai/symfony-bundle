@@ -359,8 +359,9 @@ readonly class MyTool implements ChatbotToolInterface
 
 The interface is autoconfigured. The input schema is generated from the DTO: `Assert\NotBlank` →
 required, `Assert\Email` → e-mail format, `Assert\Choice` → enum, `Assert\Length` → maxLength,
-nullable → optional. Descriptions and labels are translation keys in `messages`, or in the
-`translationDomain` you pass to `ToolDefinition` — see [Translations](#translations).
+nullable → optional. Put `#[Sensitive]` on arguments that carry personal data — see
+[Personal data in tools](https://github.com/neika-ai/sdk#personal-data-in-tools). Descriptions and
+labels are translation keys in `messages`, or in the `translationDomain` you pass to `ToolDefinition` — see [Translations](#translations).
 
 **`getDefinition()` must not read constructor arguments** — it runs at container compile time to index
 tools by name, and duplicate names fail the build.

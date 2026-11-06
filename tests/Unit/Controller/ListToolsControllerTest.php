@@ -14,6 +14,7 @@ use Neika\SymfonyBundle\Controller\ListToolsController;
 use Neika\SymfonyBundle\Tests\Unit\Fixtures\AlphaTool;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\Container;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ListToolsControllerTest extends TestCase
@@ -36,6 +37,16 @@ class ListToolsControllerTest extends TestCase
         self::assertSame('cs_CZ', $recorded);
     }
 
+    public function testEachToolListsTheArgumentsMarkedSensitive(): void
+    {
+        $translator = $this->createTranslatorRecordingTheLocale($recorded);
+
+        $response = $this->listTools($translator, 'cs_CZ');
+
+        $listedTools = json_decode((string) $response->getContent(), true)['tools'];
+        self::assertSame(['note'], $listedTools[0]['sensitiveArguments']);
+    }
+
     private function createTranslatorRecordingTheLocale(?string &$recorded): TranslatorInterface
     {
         $recorded = null;
@@ -51,7 +62,7 @@ class ListToolsControllerTest extends TestCase
         return $translator;
     }
 
-    private function listTools(TranslatorInterface $translator, string $requestedLocale): void
+    private function listTools(TranslatorInterface $translator, string $requestedLocale): JsonResponse
     {
         $localeContext = $this->createStub(ChatbotLocaleContextInterface::class);
         $localeContext->method('getCurrentLocale')->willReturn('de_AT');
@@ -68,6 +79,6 @@ class ListToolsControllerTest extends TestCase
         );
         $controller->setContainer(new Container());
 
-        $controller->__invoke(new ToolListHeaders($requestedLocale));
+        return $controller->__invoke(new ToolListHeaders($requestedLocale));
     }
 }
