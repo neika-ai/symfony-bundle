@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.0
+
+**Breaking: the routes moved to `/neika-chatbot/v1` and `/neika-chatbot/pair`, and the role is `ROLE_NEIKA_CHATBOT_BACKEND`.** Needs `neika-ai/sdk` `^0.3` and a Neika backend from 2026-11-11 or later. Update `config/packages/security.yaml`:
+
+```diff
+     chatbot_api:
+-        pattern: ^/chatbot/v1
++        pattern: ^/neika-chatbot/v1
+ ...
+ access_control:
+-    - { path: ^/chatbot/v1, roles: ROLE_CHATBOT_BACKEND }
++    - { path: ^/neika-chatbot/v1, roles: ROLE_NEIKA_CHATBOT_BACKEND }
+```
+
+- An empty `widget.cdn_url` now means `https://neika.b-cdn.net/widget/neika-chatbot.js`.
+
 ## v0.2.0
 
 **Breaking: the env vars now start with `NEIKA_`.** Rename them in `.env.local`:

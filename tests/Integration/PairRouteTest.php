@@ -14,7 +14,7 @@ class PairRouteTest extends TestCase
 
     public function testTheCodeIsReadFromTheQueryString(): void
     {
-        $response = $this->requestPairing('/chatbot/pair?code=' . self::VALID_CODE);
+        $response = $this->requestPairing('/neika-chatbot/pair?code=' . self::VALID_CODE);
 
         self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
         self::assertStringContainsString('<code>backend_url_refused</code>', (string) $response->getContent());
@@ -22,7 +22,7 @@ class PairRouteTest extends TestCase
 
     public function testAMissingCodeIsAnInvalidCode(): void
     {
-        $response = $this->requestPairing('/chatbot/pair');
+        $response = $this->requestPairing('/neika-chatbot/pair');
 
         self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
         self::assertStringContainsString('<code>invalid_code</code>', (string) $response->getContent());

@@ -231,7 +231,7 @@ class PairControllerTest extends TestCase
         $translator = $this->createIdentityTranslator();
 
         $controller = new PairController($pairingClient, $guard, $translator, new HostMatcher(), $backendUrl, $writer);
-        $request = Request::create('/chatbot/pair');
+        $request = Request::create('/neika-chatbot/pair');
 
         return $controller($request, $code);
     }

@@ -10,7 +10,7 @@ class ChatbotBackendUser implements UserInterface
 {
     public const IDENTIFIER = 'chatbot-backend';
 
-    public const ROLE = 'ROLE_CHATBOT_BACKEND';
+    public const ROLE = 'ROLE_NEIKA_CHATBOT_BACKEND';
 
     public function getRoles(): array
     {

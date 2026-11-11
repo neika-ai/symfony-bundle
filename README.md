@@ -1,6 +1,6 @@
 # Neika Symfony Bundle
 
-Symfony bundle for the [Neika](https://neika.ai) chatbot: the `/chatbot/v1` endpoints the chatbot calls, their auth,
+Symfony bundle for the [Neika](https://neika.ai) chatbot: the `/neika-chatbot/v1` endpoints the chatbot calls, their auth,
 one-click pairing and reporting back to Neika. PHP 8.1+, Symfony 6.4+. MIT.
 
 Sylius users: use [`neika-ai/sylius-plugin`](https://github.com/neika-ai/sylius-plugin).
@@ -65,7 +65,7 @@ security:
                 users: []
     firewalls:
         chatbot_api:
-            pattern: ^/chatbot/v1
+            pattern: ^/neika-chatbot/v1
             stateless: true
             provider: chatbot_backend
             entry_point: Neika\SymfonyBundle\Security\ApiAuthenticationFailureHandler
@@ -73,22 +73,22 @@ security:
                 token_handler: Neika\SymfonyBundle\Security\ApiSecretAuthenticator
                 failure_handler: Neika\SymfonyBundle\Security\ApiAuthenticationFailureHandler
     access_control:
-        - { path: ^/chatbot/v1, roles: ROLE_CHATBOT_BACKEND }
+        - { path: ^/neika-chatbot/v1, roles: ROLE_NEIKA_CHATBOT_BACKEND }
 ```
 
 **Put `chatbot_api` before any catch-all firewall.** Firewalls match in order.
 
-> Keep `/chatbot/pair` reachable without login. It's a browser redirect, and the one-time code is the proof.
+> Keep `/neika-chatbot/pair` reachable without login. It's a browser redirect, and the one-time code is the proof.
 
 ## Endpoints
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/chatbot/v1/tools` | List tools, labels in the `Accept-Language` locale |
-| POST | `/chatbot/v1/tools/{name}` | Call a tool |
-| GET | `/chatbot/v1/sources` | List data sources and their locales |
-| GET | `/chatbot/v1/sources/{name}` | Read one page of a data source |
-| GET | `/chatbot/pair?code=…` | The admin's browser lands here after clicking **Connect** |
+| GET | `/neika-chatbot/v1/tools` | List tools, labels in the `Accept-Language` locale |
+| POST | `/neika-chatbot/v1/tools/{name}` | Call a tool |
+| GET | `/neika-chatbot/v1/sources` | List data sources and their locales |
+| GET | `/neika-chatbot/v1/sources/{name}` | Read one page of a data source |
+| GET | `/neika-chatbot/pair?code=…` | The admin's browser lands here after clicking **Connect** |
 
 Request and response bodies follow the sdk's [HTTP contract](https://github.com/neika-ai/sdk#http-contract-what-the-chatbot-backend-expects).
 Errors too; `violations` is filled only on a 422.
@@ -111,14 +111,14 @@ neika:
 |---|---|---|
 | `backend_url` | `''` | Neika origin for everything the shop sends and for pairing. Empty → nothing sent. Not https outside `dev` → refused. |
 | `widget.enabled` | `true` | Parameter `neika.widget.enabled`, for whoever prints the widget. |
-| `widget.cdn_url` | `''` | Widget script URL. `''` = `https://neika.b-cdn.net/widget/v1/chat.js`. |
+| `widget.cdn_url` | `''` | Widget script URL. `''` = `https://neika.b-cdn.net/widget/neika-chatbot.js`. |
 | `widget.defer` | `true` | `false` → plain `<script src="…">`, no `defer`. |
 
 **Credentials aren't config.** The default provider reads them from env:
 
 | Env var | Used for | Empty |
 |---|---|---|
-| `NEIKA_CHATBOT_API_SECRET` | The bearer the chatbot sends to `/chatbot/v1` | Every call → 401 `unauthorized` |
+| `NEIKA_CHATBOT_API_SECRET` | The bearer the chatbot sends to `/neika-chatbot/v1` | Every call → 401 `unauthorized` |
 | `NEIKA_CHATBOT_INGEST_SECRET` | What the shop sends, as `Bearer <site key>.<ingest secret>` | `hasIngestSecret()` → `false`, nothing sent; the widget still works |
 | `NEIKA_CHATBOT_SITE_KEY` | What the shop sends, and the widget | `findCurrentSite()` → `null` |
 
@@ -172,7 +172,7 @@ class DatabaseCredentials implements CredentialsProviderInterface
 
 | Method | Called on | Return |
 |---|---|---|
-| `isApiSecretValid($token)` | Every `/chatbot/v1` request | `true` lets the chatbot in. You do the compare, so you can store only a hash. |
+| `isApiSecretValid($token)` | Every `/neika-chatbot/v1` request | `true` lets the chatbot in. You do the compare, so you can store only a hash. |
 | `findCurrentSite()` | Landings with `?neikaclid=`, and your own code | The current request's site. `null` → nothing reported. Empty ingest secret → widget only. |
 
 - Read the store on every call instead of caching it in a property. A re-paired secret then works without a
@@ -236,12 +236,12 @@ class DatabaseCredentials implements CredentialsProviderInterface, CredentialsWr
 - `save()` throws `PairingException` → the error page shows its code, nothing else happens. Any other exception → 500.
   Use a `PairingErrorCode` value to get a translated message:
   `throw new PairingException('Read-only store.', PairingErrorCode::Unsupported->value)`.
-- No writer aliased → `/chatbot/pair` answers 409 and asks the admin to paste the credentials by hand.
+- No writer aliased → `/neika-chatbot/pair` answers 409 and asks the admin to paste the credentials by hand.
 
 What happens on Connect:
 
 1. The admin clicks **Connect** on a tool-server connection in the Neika dashboard.
-2. The browser opens `{connection base URL}/chatbot/pair?code=…` on your shop.
+2. The browser opens `{connection base URL}/neika-chatbot/pair?code=…` on your shop.
 3. The bundle generates two 64-character secrets, redeems the code at `backend_url` and calls `save()`.
 4. The browser goes back to the dashboard, which tests the connection with the new API secret.
 
@@ -473,11 +473,11 @@ class ChatWidget
 Output:
 
 ```html
-<script src="https://neika.b-cdn.net/widget/v1/chat.js" defer></script>
-<ai-chat-widget site-key="{site key}" backend-url="{backend_url}"></ai-chat-widget>
+<script src="https://neika.b-cdn.net/widget/neika-chatbot.js" defer></script>
+<neika-chatbot-widget site-key="{site key}" backend-url="{backend_url}"></neika-chatbot-widget>
 ```
 
-The widget talks only to `backend_url`, never to your `/chatbot/v1`.
+The widget talks only to `backend_url`, never to your `/neika-chatbot/v1`.
 
 ## Chat click tracking
 

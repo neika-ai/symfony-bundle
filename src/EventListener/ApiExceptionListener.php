@@ -56,7 +56,7 @@ class ApiExceptionListener
 
     private function getPathPrefix(): string
     {
-        return '/chatbot/v1';
+        return '/neika-chatbot/v1';
     }
 
     private function mapQueryViolations(array $violations): ApiErrorCode
